@@ -32,7 +32,7 @@
             font-weight: bold;
             color: #333;
         }
-        input[type="text"] {
+        input[type="text"], select {
             width: 100%;
             padding: 12px;
             border: 2px solid #ddd;
@@ -40,7 +40,7 @@
             font-size: 16px;
             box-sizing: border-box;
         }
-        input[type="text"]:focus {
+        input[type="text"]:focus, select:focus {
             border-color: #007bff;
             outline: none;
         }
@@ -106,6 +106,31 @@
         
         <form method="POST" action="/generate">
             <div class="form-group">
+                <label for="barcode_type">Select barcode type:</label>
+                <select id="barcode_type" name="barcode_type" required>
+                    <option value="code128" {{ 'selected' if barcode_type == 'code128' else '' }}>Code 128 (Standard)</option>
+                    <option value="code39" {{ 'selected' if barcode_type == 'code39' else '' }}>Code 39</option>
+                    <option value="ean" {{ 'selected' if barcode_type == 'ean' else '' }}>EAN (European Article Number)</option>
+                    <option value="ean13" {{ 'selected' if barcode_type == 'ean13' else '' }}>EAN-13</option>
+                    <option value="ean8" {{ 'selected' if barcode_type == 'ean8' else '' }}>EAN-8</option>
+                    <option value="upc" {{ 'selected' if barcode_type == 'upc' else '' }}>UPC (Universal Product Code)</option>
+                    <option value="upca" {{ 'selected' if barcode_type == 'upca' else '' }}>UPC-A</option>
+                    <option value="isbn" {{ 'selected' if barcode_type == 'isbn' else '' }}>ISBN (Book)</option>
+                    <option value="isbn10" {{ 'selected' if barcode_type == 'isbn10' else '' }}>ISBN-10</option>
+                    <option value="isbn13" {{ 'selected' if barcode_type == 'isbn13' else '' }}>ISBN-13</option>
+                    <option value="issn" {{ 'selected' if barcode_type == 'issn' else '' }}>ISSN (Serial Publication)</option>
+                    <option value="itf" {{ 'selected' if barcode_type == 'itf' else '' }}>ITF (Interleaved 2 of 5)</option>
+                    <option value="gs1" {{ 'selected' if barcode_type == 'gs1' else '' }}>GS1</option>
+                    <option value="gs1_128" {{ 'selected' if barcode_type == 'gs1_128' else '' }}>GS1-128</option>
+                    <option value="codabar" {{ 'selected' if barcode_type == 'codabar' else '' }}>Codabar</option>
+                    <option value="pzn" {{ 'selected' if barcode_type == 'pzn' else '' }}>PZN (Pharmaceutical)</option>
+                    <option value="jan" {{ 'selected' if barcode_type == 'jan' else '' }}>JAN (Japanese Article Number)</option>
+                    <option value="ean14" {{ 'selected' if barcode_type == 'ean14' else '' }}>EAN-14</option>
+                    <option value="gtin" {{ 'selected' if barcode_type == 'gtin' else '' }}>GTIN (Global Trade Item Number)</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
                 <label for="text">Enter text to generate barcode:</label>
                 <input type="text" id="text" name="text" value="{{ text or '' }}" placeholder="Enter text here..." required>
             </div>
@@ -118,12 +143,13 @@
         {% if barcode_image %}
         <div class="result">
             <div class="success">
-                Barcode generated successfully for: "{{ text }}"
+                {{ barcode_type.upper() }} barcode generated successfully for: "{{ text }}"
             </div>
             <img src="data:image/png;base64,{{ barcode_image }}" alt="Generated Barcode" class="barcode-image">
             
             <form method="POST" action="/download" style="margin-top: 20px;">
                 <input type="hidden" name="text" value="{{ text }}">
+                <input type="hidden" name="barcode_type" value="{{ barcode_type }}">
                 <button type="submit" class="btn-secondary">Download Barcode</button>
             </form>
         </div>

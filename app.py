@@ -15,14 +15,15 @@ def index():
 @app.route('/generate', methods=['POST'])
 def generate_barcode():
     text = request.form.get('text', '')
+    barcode_type = request.form.get('barcode_type', 'code128')
     
     if not text:
-        return render_template('index.html', error='Please enter text to generate barcode')
+        return render_template('index.html', error='Please enter text to generate barcode', barcode_type=barcode_type)
     
     try:
-        # Generate Code128 barcode
-        code128 = barcode.get_barcode_class('code128')
-        barcode_instance = code128(text, writer=ImageWriter())
+        # Get the selected barcode class
+        barcode_class = barcode.get_barcode_class(barcode_type)
+        barcode_instance = barcode_class(text, writer=ImageWriter())
         
         # Save to BytesIO buffer
         buffer = io.BytesIO()
@@ -34,22 +35,27 @@ def generate_barcode():
         
         return render_template('index.html', 
                              barcode_image=img_base64, 
-                             text=text)
+                             text=text,
+                             barcode_type=barcode_type)
     
     except Exception as e:
-        return render_template('index.html', error=f'Error generating barcode: {str(e)}')
+        return render_template('index.html', 
+                             error=f'Error generating {barcode_type.upper()} barcode: {str(e)}', 
+                             text=text,
+                             barcode_type=barcode_type)
 
 @app.route('/download', methods=['POST'])
 def download_barcode():
     text = request.form.get('text', '')
+    barcode_type = request.form.get('barcode_type', 'code128')
     
     if not text:
-        return render_template('index.html', error='Please enter text to generate barcode')
+        return render_template('index.html', error='Please enter text to generate barcode', barcode_type=barcode_type)
     
     try:
-        # Generate Code128 barcode
-        code128 = barcode.get_barcode_class('code128')
-        barcode_instance = code128(text, writer=ImageWriter())
+        # Get the selected barcode class
+        barcode_class = barcode.get_barcode_class(barcode_type)
+        barcode_instance = barcode_class(text, writer=ImageWriter())
         
         # Save to BytesIO buffer
         buffer = io.BytesIO()
@@ -59,12 +65,15 @@ def download_barcode():
         return send_file(
             buffer,
             as_attachment=True,
-            download_name=f'barcode_{text}.png',
+            download_name=f'{barcode_type}_barcode_{text}.png',
             mimetype='image/png'
         )
     
     except Exception as e:
-        return render_template('index.html', error=f'Error generating barcode: {str(e)}')
+        return render_template('index.html', 
+                             error=f'Error generating {barcode_type.upper()} barcode: {str(e)}',
+                             text=text,
+                             barcode_type=barcode_type)
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
