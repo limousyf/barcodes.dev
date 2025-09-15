@@ -136,3 +136,9 @@ Thumbs.db
 
 # Docker
 .dockerignore
+
+# Google Cloud SDK
+google-cloud-sdk/
+
+# Claude Code
+.claude/
