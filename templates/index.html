@@ -98,6 +98,21 @@
             margin-top: 20px;
             border: 1px solid #c3e6cb;
         }
+        .footer {
+            margin-top: 50px;
+            padding: 20px 0;
+            border-top: 1px solid #ddd;
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+        }
+        .footer a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        .footer a:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
@@ -160,6 +175,10 @@
             {{ error }}
         </div>
         {% endif %}
+        
+        <div class="footer">
+            <p>&copy; 2025 Barcodes.dev. All rights reserved. | <a href="mailto:contact@barcodes.dev">Contact Us</a></p>
+        </div>
     </div>
 </body>
 </html>
