@@ -113,13 +113,72 @@
         .footer a:hover {
             text-decoration: underline;
         }
+        .tab-navigation {
+            display: flex;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #ddd;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-bottom: 3px solid transparent;
+            background-color: transparent;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: #666;
+        }
+        .tab-btn.active {
+            color: #007bff;
+            border-bottom-color: #007bff;
+            font-weight: bold;
+        }
+        .tab-btn:hover {
+            background-color: #f8f9fa;
+            color: #007bff;
+        }
+        .panel {
+            display: none;
+        }
+        .panel.active {
+            display: block;
+        }
+        .panel h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+            resize: vertical;
+        }
+        textarea:focus {
+            border-color: #007bff;
+            outline: none;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Barcode Generator</h1>
+        <h1>Barcode & QR Code Generator</h1>
         
-        <form method="POST" action="/generate">
+        <!-- Tab Navigation -->
+        <div class="tab-navigation">
+            <button type="button" class="tab-btn active" onclick="showTab('barcode')">Barcode Generator</button>
+            <button type="button" class="tab-btn" onclick="showTab('qrcode')">QR Code Generator</button>
+        </div>
+        
+        <!-- Barcode Panel -->
+        <div id="barcode-panel" class="panel active">
+            <h2>Generate Barcode</h2>
+            <form method="POST" action="/generate">
             <div class="form-group">
                 <label for="barcode_type">Select barcode type:</label>
                 <select id="barcode_type" name="barcode_type" required>
@@ -159,10 +218,45 @@
                 <input type="text" id="text" name="text" value="{{ text or '' }}" placeholder="Enter text here..." required>
             </div>
             
-            <div class="button-group">
-                <button type="submit" class="btn-primary">Generate Barcode</button>
-            </div>
-        </form>
+                <div class="button-group">
+                    <button type="submit" class="btn-primary">Generate Barcode</button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- QR Code Panel -->
+        <div id="qrcode-panel" class="panel">
+            <h2>Generate QR Code</h2>
+            <form method="POST" action="/generate_qr">
+                <div class="form-group">
+                    <label for="qr_error_correction">Error Correction Level:</label>
+                    <select id="qr_error_correction" name="qr_error_correction" required>
+                        <option value="L" {{ 'selected' if qr_error_correction == 'L' else '' }}>Low (~7% recovery)</option>
+                        <option value="M" {{ 'selected' if qr_error_correction == 'M' else '' }}>Medium (~15% recovery)</option>
+                        <option value="Q" {{ 'selected' if qr_error_correction == 'Q' else '' }}>Quartile (~25% recovery)</option>
+                        <option value="H" {{ 'selected' if qr_error_correction == 'H' else '' }}>High (~30% recovery)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="qr_image_format">Select image format:</label>
+                    <select id="qr_image_format" name="qr_image_format" required>
+                        <option value="PNG" {{ 'selected' if qr_image_format == 'PNG' else '' }}>PNG (Recommended - Best Quality)</option>
+                        <option value="JPEG" {{ 'selected' if qr_image_format == 'JPEG' else '' }}>JPEG (Smaller File Size)</option>
+                        <option value="WEBP" {{ 'selected' if qr_image_format == 'WEBP' else '' }}>WEBP (Modern Format)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="qr_text">Enter text/URL to generate QR code:</label>
+                    <textarea id="qr_text" name="qr_text" rows="4" placeholder="Enter text, URL, or any data here..." required>{{ qr_text or '' }}</textarea>
+                </div>
+                
+                <div class="button-group">
+                    <button type="submit" class="btn-primary">Generate QR Code</button>
+                </div>
+            </form>
+        </div>
         
         {% if barcode_image %}
         <div class="result">
@@ -180,6 +274,22 @@
         </div>
         {% endif %}
         
+        {% if qr_image %}
+        <div class="result">
+            <div class="success">
+                QR code in {{ qr_image_format }} format generated successfully with {{ qr_error_correction }} error correction
+            </div>
+            <img src="data:image/{{ 'jpeg' if qr_image_format == 'JPEG' else 'webp' if qr_image_format == 'WEBP' else 'png' }};base64,{{ qr_image }}" alt="Generated QR Code" class="barcode-image">
+            
+            <form method="POST" action="/download_qr" style="margin-top: 20px;">
+                <input type="hidden" name="qr_text" value="{{ qr_text }}">
+                <input type="hidden" name="qr_error_correction" value="{{ qr_error_correction }}">
+                <input type="hidden" name="qr_image_format" value="{{ qr_image_format }}">
+                <button type="submit" class="btn-secondary">Download {{ qr_image_format }} QR Code</button>
+            </form>
+        </div>
+        {% endif %}
+        
         {% if error %}
         <div class="error">
             {{ error }}
@@ -190,5 +300,42 @@
             <p>&copy; 2025 Barcodes.dev. All rights reserved. | <a href="mailto:contact@barcodes.dev">Contact Us</a></p>
         </div>
     </div>
+    
+    <script>
+        function showTab(tabName) {
+            // Hide all panels
+            document.querySelectorAll('.panel').forEach(panel => {
+                panel.classList.remove('active');
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Show selected panel
+            document.getElementById(tabName + '-panel').classList.add('active');
+            
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+        }
+        
+        // Show correct tab based on URL parameters or results
+        document.addEventListener('DOMContentLoaded', function() {
+            {% if qr_image or qr_text %}
+            // Hide all panels and tabs first
+            document.querySelectorAll('.panel').forEach(panel => {
+                panel.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Show QR code panel
+            document.getElementById('qrcode-panel').classList.add('active');
+            document.querySelector('[onclick="showTab(\\\'qrcode\\\')"]').classList.add('active');
+            {% endif %}
+        });
+    </script>
 </body>
 </html>
