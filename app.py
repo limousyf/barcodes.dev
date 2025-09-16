@@ -96,10 +96,16 @@ def generate_qr():
     text = request.form.get('qr_text', '')
     error_correction = request.form.get('qr_error_correction', 'M')
     image_format = request.form.get('qr_image_format', 'PNG')
+    fill_color = request.form.get('qr_fill_color', '#000000')
+    back_color = request.form.get('qr_back_color', '#ffffff')
+    box_size = int(request.form.get('qr_box_size', '10'))
+    border = int(request.form.get('qr_border', '4'))
     
     if not text:
         return render_template('index.html', error='Please enter text to generate QR code', 
-                             qr_error_correction=error_correction, qr_image_format=image_format)
+                             qr_error_correction=error_correction, qr_image_format=image_format,
+                             qr_fill_color=fill_color, qr_back_color=back_color,
+                             qr_box_size=box_size, qr_border=border)
     
     try:
         # Map error correction levels
@@ -110,18 +116,18 @@ def generate_qr():
             'H': qrcode.constants.ERROR_CORRECT_H
         }
         
-        # Create QR code instance
+        # Create QR code instance with advanced options
         qr = qrcode.QRCode(
             version=1,
             error_correction=error_correction_map.get(error_correction, qrcode.constants.ERROR_CORRECT_M),
-            box_size=10,
-            border=4,
+            box_size=box_size,
+            border=border,
         )
         qr.add_data(text)
         qr.make(fit=True)
 
-        # Create image
-        img = qr.make_image(fill_color="black", back_color="white")
+        # Create image with custom colors
+        img = qr.make_image(fill_color=fill_color, back_color=back_color)
         
         # Convert to desired format
         buffer = io.BytesIO()
@@ -138,24 +144,38 @@ def generate_qr():
                              qr_image=img_base64, 
                              qr_text=text,
                              qr_error_correction=error_correction,
-                             qr_image_format=image_format)
+                             qr_image_format=image_format,
+                             qr_fill_color=fill_color,
+                             qr_back_color=back_color,
+                             qr_box_size=box_size,
+                             qr_border=border)
     
     except Exception as e:
         return render_template('index.html', 
                              error=f'Error generating QR code in {image_format} format: {str(e)}', 
                              qr_text=text,
                              qr_error_correction=error_correction,
-                             qr_image_format=image_format)
+                             qr_image_format=image_format,
+                             qr_fill_color=fill_color,
+                             qr_back_color=back_color,
+                             qr_box_size=box_size,
+                             qr_border=border)
 
 @app.route('/download_qr', methods=['POST'])
 def download_qr():
     text = request.form.get('qr_text', '')
     error_correction = request.form.get('qr_error_correction', 'M')
     image_format = request.form.get('qr_image_format', 'PNG')
+    fill_color = request.form.get('qr_fill_color', '#000000')
+    back_color = request.form.get('qr_back_color', '#ffffff')
+    box_size = int(request.form.get('qr_box_size', '10'))
+    border = int(request.form.get('qr_border', '4'))
     
     if not text:
         return render_template('index.html', error='Please enter text to generate QR code', 
-                             qr_error_correction=error_correction, qr_image_format=image_format)
+                             qr_error_correction=error_correction, qr_image_format=image_format,
+                             qr_fill_color=fill_color, qr_back_color=back_color,
+                             qr_box_size=box_size, qr_border=border)
     
     try:
         # Map error correction levels
@@ -166,18 +186,18 @@ def download_qr():
             'H': qrcode.constants.ERROR_CORRECT_H
         }
         
-        # Create QR code instance
+        # Create QR code instance with advanced options
         qr = qrcode.QRCode(
             version=1,
             error_correction=error_correction_map.get(error_correction, qrcode.constants.ERROR_CORRECT_M),
-            box_size=10,
-            border=4,
+            box_size=box_size,
+            border=border,
         )
         qr.add_data(text)
         qr.make(fit=True)
 
-        # Create image
-        img = qr.make_image(fill_color="black", back_color="white")
+        # Create image with custom colors
+        img = qr.make_image(fill_color=fill_color, back_color=back_color)
         
         # Convert to desired format
         buffer = io.BytesIO()
@@ -210,7 +230,11 @@ def download_qr():
                              error=f'Error generating QR code in {image_format} format: {str(e)}',
                              qr_text=text,
                              qr_error_correction=error_correction,
-                             qr_image_format=image_format)
+                             qr_image_format=image_format,
+                             qr_fill_color=fill_color,
+                             qr_back_color=back_color,
+                             qr_box_size=box_size,
+                             qr_border=border)
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))

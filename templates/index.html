@@ -163,6 +163,68 @@
             border-color: #007bff;
             outline: none;
         }
+        .advanced-panel {
+            margin: 20px 0;
+        }
+        .advanced-toggle {
+            background: none;
+            border: none;
+            color: #007bff;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 8px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: color 0.3s;
+        }
+        .advanced-toggle:hover {
+            color: #0056b3;
+        }
+        .advanced-content {
+            display: none;
+            margin-top: 15px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f8f9fa;
+        }
+        .advanced-content.open {
+            display: block;
+        }
+        .form-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .form-group.half-width {
+            flex: 1;
+            margin-bottom: 0;
+        }
+        input[type="color"] {
+            width: 100%;
+            height: 40px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            cursor: pointer;
+            padding: 2px;
+        }
+        input[type="color"]:focus {
+            border-color: #007bff;
+            outline: none;
+        }
+        input[type="number"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        input[type="number"]:focus {
+            border-color: #007bff;
+            outline: none;
+        }
     </style>
 </head>
 <body>
@@ -252,6 +314,35 @@
                     <textarea id="qr_text" name="qr_text" rows="4" placeholder="Enter text, URL, or any data here..." required>{{ qr_text or '' }}</textarea>
                 </div>
                 
+                <!-- Advanced Options Panel -->
+                <div class="advanced-panel">
+                    <button type="button" class="advanced-toggle" onclick="toggleAdvanced()">
+                        <span id="advanced-arrow">▶</span> Advanced Options
+                    </button>
+                    <div id="advanced-options" class="advanced-content">
+                        <div class="form-row">
+                            <div class="form-group half-width">
+                                <label for="qr_fill_color">QR Code Color:</label>
+                                <input type="color" id="qr_fill_color" name="qr_fill_color" value="{{ qr_fill_color or '#000000' }}">
+                            </div>
+                            <div class="form-group half-width">
+                                <label for="qr_back_color">Background Color:</label>
+                                <input type="color" id="qr_back_color" name="qr_back_color" value="{{ qr_back_color or '#ffffff' }}">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group half-width">
+                                <label for="qr_box_size">Box Size (1-50):</label>
+                                <input type="number" id="qr_box_size" name="qr_box_size" min="1" max="50" value="{{ qr_box_size or '10' }}">
+                            </div>
+                            <div class="form-group half-width">
+                                <label for="qr_border">Border Size (0-20):</label>
+                                <input type="number" id="qr_border" name="qr_border" min="0" max="20" value="{{ qr_border or '4' }}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
                 <div class="button-group">
                     <button type="submit" class="btn-primary">Generate QR Code</button>
                 </div>
@@ -285,6 +376,10 @@
                 <input type="hidden" name="qr_text" value="{{ qr_text }}">
                 <input type="hidden" name="qr_error_correction" value="{{ qr_error_correction }}">
                 <input type="hidden" name="qr_image_format" value="{{ qr_image_format }}">
+                <input type="hidden" name="qr_fill_color" value="{{ qr_fill_color }}">
+                <input type="hidden" name="qr_back_color" value="{{ qr_back_color }}">
+                <input type="hidden" name="qr_box_size" value="{{ qr_box_size }}">
+                <input type="hidden" name="qr_border" value="{{ qr_border }}">
                 <button type="submit" class="btn-secondary">Download {{ qr_image_format }} QR Code</button>
             </form>
         </div>
@@ -320,6 +415,19 @@
             event.target.classList.add('active');
         }
         
+        function toggleAdvanced() {
+            const content = document.getElementById('advanced-options');
+            const arrow = document.getElementById('advanced-arrow');
+            
+            if (content.classList.contains('open')) {
+                content.classList.remove('open');
+                arrow.textContent = '▶';
+            } else {
+                content.classList.add('open');
+                arrow.textContent = '▼';
+            }
+        }
+        
         // Show correct tab based on URL parameters or results
         document.addEventListener('DOMContentLoaded', function() {
             {% if qr_image or qr_text %}
@@ -333,7 +441,7 @@
             
             // Show QR code panel
             document.getElementById('qrcode-panel').classList.add('active');
-            document.querySelector('[onclick="showTab(\\\'qrcode\\\')"]').classList.add('active');
+            document.querySelector('button[onclick*="qrcode"]').classList.add('active');
             {% endif %}
         });
     </script>
