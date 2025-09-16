@@ -1,14 +1,34 @@
 # Barcode Generator Web Application
 
-A Flask web application that generates barcodes from user input text and displays them as images. The application is designed to run on Google Cloud Compute Engine.
+A Flask web application that generates barcodes from user input text and displays them as images. The application supports multiple barcode symbologies and image formats, designed to run on Google Cloud Compute Engine with SSL/HTTPS support.
 
 ## Features
 
-- Generate Code128 barcodes from text input
-- Display barcode images in the web interface
-- Download generated barcodes as PNG files
-- Responsive web design
-- Docker containerized for easy deployment
+- **Multiple Barcode Symbologies**: Support for 19 different barcode types including:
+  - Code128 (Standard)
+  - Code39
+  - EAN (European Article Number)
+  - EAN-13, EAN-8, EAN-14
+  - UPC (Universal Product Code)
+  - UPC-A
+  - ISBN (Book) - ISBN-10, ISBN-13
+  - ISSN (Serial Publication)
+  - ITF (Interleaved 2 of 5)
+  - GS1, GS1-128
+  - Codabar
+  - PZN (Pharmaceutical)
+  - JAN (Japanese Article Number)
+  - GTIN (Global Trade Item Number)
+
+- **Multiple Image Formats**: Generate barcodes in:
+  - PNG (Recommended - Best Quality)
+  - JPEG (Smaller File Size)
+  - WEBP (Modern Format)
+
+- **Download Support**: Download generated barcodes in any supported format
+- **Responsive Web Design**: Mobile-friendly interface
+- **SSL/HTTPS Support**: Secure connections with Google-managed certificates
+- **Docker Containerized**: Easy deployment and scaling
 
 ## Local Development
 
@@ -50,7 +70,7 @@ gcloud auth configure-docker
 gcloud compute instances describe barcode-generator --zone=us-central1-a --format='get(networkInterfaces[0].accessConfigs[0].natIP)'
 ```
 
-4. Access your application at `http://[EXTERNAL_IP]:8080`
+4. Access your application at `https://[EXTERNAL_IP]:8080` or via the configured domain
 
 ## Alternative Deployment Methods
 
@@ -90,6 +110,29 @@ barcodes.dev/
 ## Dependencies
 
 - Flask: Web framework
-- python-barcode: Barcode generation library
-- Pillow: Image processing
+- python-barcode: Barcode generation library with support for multiple symbologies
+- Pillow: Image processing and format conversion
 - gunicorn: WSGI HTTP Server
+
+## Supported Barcode Types
+
+The application leverages the python-barcode library to support a wide range of barcode symbologies:
+
+| Symbology | Use Case | Example Input |
+|-----------|----------|---------------|
+| Code128 | General purpose, alphanumeric | `ABC123` |
+| Code39 | Industrial applications | `123ABC` |
+| EAN-13 | Retail products (13 digits) | `1234567890123` |
+| EAN-8 | Small retail products (8 digits) | `12345678` |
+| UPC-A | North American retail | `012345678905` |
+| ISBN-13 | Books (13 digits) | `9780123456789` |
+| ISBN-10 | Books (10 digits) | `0123456789` |
+| ISSN | Serial publications | `12345678` |
+| ITF | Shipping containers | `1234567890` |
+| GS1-128 | Supply chain | `(01)12345678901234` |
+
+## Image Format Support
+
+- **PNG**: Lossless compression, best for high-quality barcodes
+- **JPEG**: Lossy compression, smaller file sizes
+- **WEBP**: Modern format with excellent compression
