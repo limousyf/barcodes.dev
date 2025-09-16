@@ -146,6 +146,15 @@
             </div>
             
             <div class="form-group">
+                <label for="image_format">Select image format:</label>
+                <select id="image_format" name="image_format" required>
+                    <option value="PNG" {{ 'selected' if image_format == 'PNG' else '' }}>PNG (Recommended - Best Quality)</option>
+                    <option value="JPEG" {{ 'selected' if image_format == 'JPEG' else '' }}>JPEG (Smaller File Size)</option>
+                    <option value="WEBP" {{ 'selected' if image_format == 'WEBP' else '' }}>WEBP (Modern Format)</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
                 <label for="text">Enter text to generate barcode:</label>
                 <input type="text" id="text" name="text" value="{{ text or '' }}" placeholder="Enter text here..." required>
             </div>
@@ -158,14 +167,15 @@
         {% if barcode_image %}
         <div class="result">
             <div class="success">
-                {{ barcode_type.upper() }} barcode generated successfully for: "{{ text }}"
+                {{ barcode_type.upper() }} barcode in {{ image_format }} format generated successfully for: "{{ text }}"
             </div>
-            <img src="data:image/png;base64,{{ barcode_image }}" alt="Generated Barcode" class="barcode-image">
+            <img src="data:image/{{ 'jpeg' if image_format == 'JPEG' else 'webp' if image_format == 'WEBP' else 'png' }};base64,{{ barcode_image }}" alt="Generated Barcode" class="barcode-image">
             
             <form method="POST" action="/download" style="margin-top: 20px;">
                 <input type="hidden" name="text" value="{{ text }}">
                 <input type="hidden" name="barcode_type" value="{{ barcode_type }}">
-                <button type="submit" class="btn-secondary">Download Barcode</button>
+                <input type="hidden" name="image_format" value="{{ image_format }}">
+                <button type="submit" class="btn-secondary">Download {{ image_format }} Barcode</button>
             </form>
         </div>
         {% endif %}
