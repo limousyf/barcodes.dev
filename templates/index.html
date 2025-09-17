@@ -24,10 +24,18 @@
             margin-bottom: 30px;
             gap: 15px;
         }
-        .logo {
-            width: 50px;
-            height: 50px;
+        .logo-link {
+            display: inline-block;
             flex-shrink: 0;
+            transition: opacity 0.3s ease;
+        }
+        .logo-link:hover {
+            opacity: 0.8;
+        }
+        .logo {
+            width: 80px;
+            height: 80px;
+            display: block;
         }
         h1 {
             color: #333;
@@ -242,7 +250,9 @@
 <body>
     <div class="container">
         <div class="header">
-            <img src="/static/img/barcodesdev-logo.svg" alt="Barcodes.dev Logo" class="logo">
+            <a href="/" class="logo-link">
+                <img src="/static/img/barcodesdev-logo.svg" alt="Barcodes.dev Logo" class="logo">
+            </a>
             <h1>Barcode & QR Code Generator</h1>
         </div>
         
