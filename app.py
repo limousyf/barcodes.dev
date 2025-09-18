@@ -11,6 +11,29 @@ from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
 
+def get_real_ip():
+    """Get the real client IP address, accounting for proxies and load balancers."""
+    # Check common proxy headers in order of preference
+    headers_to_check = [
+        'X-Forwarded-For',     # Standard header for proxies
+        'X-Real-IP',           # Nginx proxy header
+        'X-Forwarded',         # Older proxy header
+        'Forwarded-For',       # Older proxy header
+        'Forwarded'            # RFC 7239 standard
+    ]
+    
+    for header in headers_to_check:
+        value = request.headers.get(header)
+        if value:
+            # X-Forwarded-For can contain multiple IPs: "client, proxy1, proxy2"
+            # The first one is the original client IP
+            ip = value.split(',')[0].strip()
+            if ip:
+                return ip
+    
+    # Fallback to remote_addr if no proxy headers found
+    return request.remote_addr or 'unknown'
+
 # Database configuration with PostgreSQL priority and SQLite fallback
 def configure_database():
     database_url = os.environ.get('DATABASE_URL')
@@ -88,7 +111,7 @@ def generate_barcode():
         # Log generation to database
         try:
             record = GenerationRecord(
-                ip_address=request.remote_addr or 'unknown',
+                ip_address=get_real_ip(),
                 code_type='barcode',
                 barcode_symbology=barcode_type,
                 code_value=text,
@@ -214,7 +237,7 @@ def generate_qr():
                 'error_correction': error_correction
             }
             record = GenerationRecord(
-                ip_address=request.remote_addr or 'unknown',
+                ip_address=get_real_ip(),
                 code_type='qrcode',
                 code_value=text,
                 image_format=image_format,
