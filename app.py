@@ -6,8 +6,56 @@ import io
 import base64
 from PIL import Image
 import os
+from datetime import datetime
+from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
+
+# Database configuration with PostgreSQL priority and SQLite fallback
+def configure_database():
+    database_url = os.environ.get('DATABASE_URL')
+    
+    if database_url and database_url.startswith('postgresql://'):
+        try:
+            # Test PostgreSQL connection
+            import psycopg2
+            conn = psycopg2.connect(database_url)
+            conn.close()
+            print(f"✅ Connected to PostgreSQL: {database_url.split('@')[1] if '@' in database_url else 'remote'}")
+            return database_url
+        except Exception as e:
+            print(f"❌ PostgreSQL connection failed: {e}")
+            print("🔄 Falling back to SQLite...")
+    
+    sqlite_url = 'sqlite:///barcode_records.db'
+    print(f"📁 Using SQLite database: {sqlite_url}")
+    return sqlite_url
+
+app.config['SQLALCHEMY_DATABASE_URI'] = configure_database()
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db = SQLAlchemy(app)
+
+# Database model
+class GenerationRecord(db.Model):
+    __tablename__ = 'generation_records'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    ip_address = db.Column(db.String(45), nullable=False)  # Using String for SQLite compatibility
+    code_type = db.Column(db.String(20), nullable=False)  # 'barcode' or 'qrcode'
+    barcode_symbology = db.Column(db.String(50))  # For barcodes: 'code128', 'ean13', etc.
+    code_value = db.Column(db.Text, nullable=False)
+    image_format = db.Column(db.String(10), nullable=False)  # 'PNG', 'JPEG', 'WEBP'
+    qr_options = db.Column(db.JSON)  # For QR codes: {fill_color, back_color, box_size, border, error_correction}
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    user_agent = db.Column(db.Text)
+    
+    def __repr__(self):
+        return f'<GenerationRecord {self.code_type}: {self.code_value[:50]}>'
+
+# Create tables
+with app.app_context():
+    db.create_all()
 
 @app.route('/')
 def index():
@@ -36,6 +84,22 @@ def generate_barcode():
         
         # Convert to base64 for display in HTML
         img_base64 = base64.b64encode(buffer.getvalue()).decode()
+        
+        # Log generation to database
+        try:
+            record = GenerationRecord(
+                ip_address=request.remote_addr or 'unknown',
+                code_type='barcode',
+                barcode_symbology=barcode_type,
+                code_value=text,
+                image_format=image_format,
+                user_agent=request.headers.get('User-Agent', '')
+            )
+            db.session.add(record)
+            db.session.commit()
+        except Exception as db_error:
+            # Don't fail the request if database logging fails
+            print(f"Database logging error: {db_error}")
         
         return render_template('index.html', 
                              barcode_image=img_base64, 
@@ -139,6 +203,29 @@ def generate_qr():
         
         # Convert to base64 for display in HTML
         img_base64 = base64.b64encode(buffer.getvalue()).decode()
+        
+        # Log generation to database
+        try:
+            qr_opts = {
+                'fill_color': fill_color,
+                'back_color': back_color,
+                'box_size': box_size,
+                'border': border,
+                'error_correction': error_correction
+            }
+            record = GenerationRecord(
+                ip_address=request.remote_addr or 'unknown',
+                code_type='qrcode',
+                code_value=text,
+                image_format=image_format,
+                qr_options=qr_opts,
+                user_agent=request.headers.get('User-Agent', '')
+            )
+            db.session.add(record)
+            db.session.commit()
+        except Exception as db_error:
+            # Don't fail the request if database logging fails
+            print(f"Database logging error: {db_error}")
         
         return render_template('index.html', 
                              qr_image=img_base64, 
