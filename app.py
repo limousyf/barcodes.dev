@@ -27,7 +27,7 @@ def get_real_ip():
         if value:
             # X-Forwarded-For can contain multiple IPs: "client, proxy1, proxy2"
             # The first one is the original client IP
-            ip = value.split(',')[0].strip()
+            ip = value #.split(',')[0].strip()
             if ip:
                 return ip
     
