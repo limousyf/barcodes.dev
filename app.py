@@ -13,6 +13,13 @@ app = Flask(__name__)
 
 def get_real_ip():
     """Get the real client IP address, accounting for proxies and load balancers."""
+    # Debug: Print all headers to see what's available
+    print("=== DEBUG: All request headers ===")
+    for header, value in request.headers:
+        print(f"{header}: {value}")
+    print(f"request.remote_addr: {request.remote_addr}")
+    print("=== END DEBUG ===")
+    
     # Check common proxy headers in order of preference
     headers_to_check = [
         'X-Forwarded-For',     # Standard header for proxies
@@ -27,11 +34,13 @@ def get_real_ip():
         if value:
             # X-Forwarded-For can contain multiple IPs: "client, proxy1, proxy2"
             # The first one is the original client IP
-            ip = value #.split(',')[0].strip()
+            ip = value.split(',')[0].strip()
+            print(f"Found {header}: {value}, extracted IP: {ip}")
             if ip:
                 return ip
     
     # Fallback to remote_addr if no proxy headers found
+    print(f"No proxy headers found, using remote_addr: {request.remote_addr}")
     return request.remote_addr or 'unknown'
 
 # Database configuration with PostgreSQL priority and SQLite fallback
