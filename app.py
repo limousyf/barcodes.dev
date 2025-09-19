@@ -91,7 +91,7 @@ def index():
 
 @app.route('/debug')
 def debug():
-    """Debug endpoint to view recent headers"""
+    """Debug endpoint to view recent headers - updated"""
     try:
         records = GenerationRecord.query.order_by(GenerationRecord.created_at.desc()).limit(10).all()
         debug_info = []
