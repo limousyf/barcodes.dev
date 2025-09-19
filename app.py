@@ -13,13 +13,6 @@ app = Flask(__name__)
 
 def get_real_ip():
     """Get the real client IP address, accounting for proxies and load balancers."""
-    # Debug: Print all headers to see what's available
-    print("=== DEBUG: All request headers ===")
-    for header, value in request.headers:
-        print(f"{header}: {value}")
-    print(f"request.remote_addr: {request.remote_addr}")
-    print("=== END DEBUG ===")
-    
     # Check common proxy headers in order of preference
     headers_to_check = [
         'X-Forwarded-For',     # Standard header for proxies
@@ -35,13 +28,15 @@ def get_real_ip():
             # X-Forwarded-For can contain multiple IPs: "client, proxy1, proxy2"
             # The first one is the original client IP
             ip = value.split(',')[0].strip()
-            print(f"Found {header}: {value}, extracted IP: {ip}")
             if ip:
                 return ip
     
     # Fallback to remote_addr if no proxy headers found
-    print(f"No proxy headers found, using remote_addr: {request.remote_addr}")
     return request.remote_addr or 'unknown'
+
+def get_debug_headers():
+    """Get all request headers for debugging purposes."""
+    return str(dict(request.headers)) + f" | remote_addr: {request.remote_addr}"
 
 # Database configuration with PostgreSQL priority and SQLite fallback
 def configure_database():
@@ -81,6 +76,7 @@ class GenerationRecord(db.Model):
     qr_options = db.Column(db.JSON)  # For QR codes: {fill_color, back_color, box_size, border, error_correction}
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     user_agent = db.Column(db.Text)
+    debug_headers = db.Column(db.Text)  # Temporary field for debugging
     
     def __repr__(self):
         return f'<GenerationRecord {self.code_type}: {self.code_value[:50]}>'
@@ -92,6 +88,22 @@ with app.app_context():
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@app.route('/debug')
+def debug():
+    """Debug endpoint to view recent headers"""
+    try:
+        records = GenerationRecord.query.order_by(GenerationRecord.created_at.desc()).limit(10).all()
+        debug_info = []
+        for record in records:
+            debug_info.append({
+                'ip_address': record.ip_address,
+                'debug_headers': record.debug_headers,
+                'created_at': record.created_at
+            })
+        return str(debug_info)
+    except Exception as e:
+        return f"Error: {str(e)}"
 
 @app.route('/generate', methods=['POST'])
 def generate_barcode():
@@ -125,7 +137,8 @@ def generate_barcode():
                 barcode_symbology=barcode_type,
                 code_value=text,
                 image_format=image_format,
-                user_agent=request.headers.get('User-Agent', '')
+                user_agent=request.headers.get('User-Agent', ''),
+                debug_headers=get_debug_headers()
             )
             db.session.add(record)
             db.session.commit()
@@ -251,7 +264,8 @@ def generate_qr():
                 code_value=text,
                 image_format=image_format,
                 qr_options=qr_opts,
-                user_agent=request.headers.get('User-Agent', '')
+                user_agent=request.headers.get('User-Agent', ''),
+                debug_headers=get_debug_headers()
             )
             db.session.add(record)
             db.session.commit()
