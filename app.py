@@ -8,6 +8,7 @@ from PIL import Image
 import os
 from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 
 app = Flask(__name__)
 
@@ -62,6 +63,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = configure_database()
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
+migrate = Migrate(app, db)
 
 # Database model
 class GenerationRecord(db.Model):
@@ -81,9 +83,18 @@ class GenerationRecord(db.Model):
     def __repr__(self):
         return f'<GenerationRecord {self.code_type}: {self.code_value[:50]}>'
 
-# Create tables
+# Initialize database - this will be handled by migrations in production
+# For development, we'll use create_all() as a fallback
+def init_db():
+    """Initialize database tables"""
+    try:
+        db.create_all()
+        print("✅ Database tables created/updated")
+    except Exception as e:
+        print(f"❌ Error creating database tables: {e}")
+
 with app.app_context():
-    db.create_all()
+    init_db()
 
 @app.route('/')
 def index():
@@ -98,7 +109,7 @@ def debug():
         for record in records:
             debug_info.append({
                 'ip_address': record.ip_address,
-                'debug_headers': record.debug_headers,
+                'debug_headers': getattr(record, 'debug_headers', 'column not available'),
                 'created_at': record.created_at
             })
         return str(debug_info)
