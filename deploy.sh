@@ -10,10 +10,14 @@ MACHINE_TYPE="e2-micro"
 
 # Database configuration
 DB_HOST="34.69.80.105"
-DB_NAME="barcode_db"
+DB_NAME="barcode_records"
 DB_USER="barcode_user"
 DB_PASS="barcode_pass"
 DATABASE_URL="postgresql://$DB_USER:$DB_PASS@$DB_HOST:5432/$DB_NAME"
+
+# Static IP configuration
+STATIC_IP_NAME="barcode-static-ip"
+STATIC_IP_ADDRESS="34.61.233.111"
 
 echo "Building and deploying Barcode Generator to Google Cloud Compute Engine..."
 
@@ -31,14 +35,15 @@ if gcloud compute instances describe $INSTANCE_NAME --zone=$ZONE --project=$PROJ
     gcloud compute instances delete $INSTANCE_NAME --zone=$ZONE --project=$PROJECT_ID --quiet
 fi
 
-# Create the compute instance with PostgreSQL environment variable
-echo "Creating compute instance with PostgreSQL configuration..."
+# Create the compute instance with PostgreSQL environment variable and static IP
+echo "Creating compute instance with PostgreSQL configuration and static IP..."
 gcloud compute instances create-with-container $INSTANCE_NAME \
     --zone=$ZONE \
     --machine-type=$MACHINE_TYPE \
     --container-image=gcr.io/$PROJECT_ID/barcode-generator \
     --container-restart-policy=always \
     --container-env=DATABASE_URL="$DATABASE_URL" \
+    --address=$STATIC_IP_ADDRESS \
     --tags=http-server,https-server \
     --project=$PROJECT_ID
 
@@ -61,16 +66,16 @@ echo "Zone: $ZONE"
 echo "Database: PostgreSQL (Cloud SQL)"
 echo ""
 
-# Get and display the external IP
-EXTERNAL_IP=$(gcloud compute instances describe $INSTANCE_NAME --zone=$ZONE --format='get(networkInterfaces[0].accessConfigs[0].natIP)' --project=$PROJECT_ID)
+# Display the static IP information
 echo "🌐 Access Information:"
 echo "====================="
-echo "External IP: $EXTERNAL_IP"
-echo "Web Interface: http://$EXTERNAL_IP:8080"
-echo "Barcode API: POST http://$EXTERNAL_IP:8080/api/barcode"
-echo "QR Code API: POST http://$EXTERNAL_IP:8080/api/qrcode"
+echo "Static IP: $STATIC_IP_ADDRESS (permanent)"
+echo "Web Interface: http://$STATIC_IP_ADDRESS:8080"
+echo "Barcode API: POST http://$STATIC_IP_ADDRESS:8080/api/barcode"
+echo "QR Code API: POST http://$STATIC_IP_ADDRESS:8080/api/qrcode"
 echo ""
 echo "💡 Next Steps:"
-echo "- Update your DNS A record for barcodes.dev to point to: $EXTERNAL_IP"
+echo "- Update your DNS A record for barcodes.dev to point to: $STATIC_IP_ADDRESS"
+echo "- This IP address is static and will not change"
 echo "- Wait 2-3 minutes for the container to fully start"
 echo "- Test the APIs using the endpoints above"
