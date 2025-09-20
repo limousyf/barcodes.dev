@@ -380,6 +380,267 @@ def download_qr():
                              qr_box_size=box_size,
                              qr_border=border)
 
+# API Endpoints for headless access
+@app.route('/api/barcode', methods=['POST'])
+def api_generate_barcode():
+    """API endpoint for generating barcodes"""
+    # Parse JSON or form data
+    if request.is_json:
+        data = request.get_json()
+    else:
+        data = request.form.to_dict()
+    
+    # Extract parameters
+    text = data.get('text', '').strip()
+    barcode_type = data.get('barcode_type', 'code128')
+    image_format = data.get('image_format', 'PNG')
+    
+    # Validate required parameters
+    if not text:
+        return {
+            'error': 'Missing required parameter: text',
+            'message': 'The text parameter is required and cannot be empty'
+        }, 400
+    
+    # Validate barcode type
+    valid_barcode_types = [
+        'code128', 'code39', 'ean', 'ean13', 'ean8', 'upc', 'upca', 
+        'isbn', 'isbn10', 'isbn13', 'issn', 'itf', 'gs1', 'gs1_128', 
+        'codabar', 'pzn', 'jan', 'ean14', 'gtin'
+    ]
+    if barcode_type not in valid_barcode_types:
+        return {
+            'error': 'Invalid barcode_type',
+            'message': f'barcode_type must be one of: {", ".join(valid_barcode_types)}',
+            'provided': barcode_type
+        }, 400
+    
+    # Validate image format
+    valid_image_formats = ['PNG', 'JPEG', 'WEBP']
+    if image_format.upper() not in valid_image_formats:
+        return {
+            'error': 'Invalid image_format',
+            'message': f'image_format must be one of: {", ".join(valid_image_formats)}',
+            'provided': image_format
+        }, 400
+    
+    try:
+        # Generate barcode
+        writer = ImageWriter(format=image_format.upper())
+        barcode_class = barcode.get_barcode_class(barcode_type)
+        barcode_instance = barcode_class(text, writer=writer)
+        
+        # Save to BytesIO buffer
+        buffer = io.BytesIO()
+        barcode_instance.write(buffer)
+        buffer.seek(0)
+        
+        # Log generation to database
+        try:
+            record = GenerationRecord(
+                ip_address=get_real_ip(),
+                code_type='barcode',
+                barcode_symbology=barcode_type,
+                code_value=text,
+                image_format=image_format.upper(),
+                user_agent=request.headers.get('User-Agent', ''),
+                debug_headers=get_debug_headers()
+            )
+            db.session.add(record)
+            db.session.commit()
+        except Exception as db_error:
+            # Don't fail the request if database logging fails
+            print(f"Database logging error: {db_error}")
+        
+        # Return the image file
+        file_ext = image_format.lower()
+        if file_ext == 'jpeg':
+            file_ext = 'jpg'
+        mimetype = f'image/{file_ext}'
+        
+        return send_file(
+            buffer,
+            as_attachment=False,
+            download_name=f'{barcode_type}_barcode.{file_ext}',
+            mimetype=mimetype
+        )
+    
+    except Exception as e:
+        return {
+            'error': 'Barcode generation failed',
+            'message': f'Error generating {barcode_type.upper()} barcode in {image_format} format: {str(e)}',
+            'parameters': {
+                'text': text,
+                'barcode_type': barcode_type,
+                'image_format': image_format
+            }
+        }, 500
+
+@app.route('/api/qrcode', methods=['POST'])
+def api_generate_qr():
+    """API endpoint for generating QR codes"""
+    # Parse JSON or form data
+    if request.is_json:
+        data = request.get_json()
+    else:
+        data = request.form.to_dict()
+    
+    # Extract parameters
+    text = data.get('text', '').strip()
+    error_correction = data.get('error_correction', 'M')
+    image_format = data.get('image_format', 'PNG')
+    fill_color = data.get('fill_color', '#000000')
+    back_color = data.get('back_color', '#ffffff')
+    
+    # Validate and parse numeric parameters
+    try:
+        box_size = int(data.get('box_size', '10'))
+        border = int(data.get('border', '4'))
+    except (ValueError, TypeError):
+        return {
+            'error': 'Invalid numeric parameter',
+            'message': 'box_size and border must be valid integers'
+        }, 400
+    
+    # Validate required parameters
+    if not text:
+        return {
+            'error': 'Missing required parameter: text',
+            'message': 'The text parameter is required and cannot be empty'
+        }, 400
+    
+    # Validate error correction level
+    valid_error_corrections = ['L', 'M', 'Q', 'H']
+    if error_correction not in valid_error_corrections:
+        return {
+            'error': 'Invalid error_correction',
+            'message': f'error_correction must be one of: {", ".join(valid_error_corrections)}',
+            'provided': error_correction
+        }, 400
+    
+    # Validate image format
+    valid_image_formats = ['PNG', 'JPEG', 'WEBP']
+    if image_format.upper() not in valid_image_formats:
+        return {
+            'error': 'Invalid image_format',
+            'message': f'image_format must be one of: {", ".join(valid_image_formats)}',
+            'provided': image_format
+        }, 400
+    
+    # Validate numeric ranges
+    if not (1 <= box_size <= 50):
+        return {
+            'error': 'Invalid box_size',
+            'message': 'box_size must be between 1 and 50',
+            'provided': box_size
+        }, 400
+    
+    if not (0 <= border <= 20):
+        return {
+            'error': 'Invalid border',
+            'message': 'border must be between 0 and 20',
+            'provided': border
+        }, 400
+    
+    # Validate color format (basic hex color validation)
+    import re
+    color_pattern = re.compile(r'^#[0-9A-Fa-f]{6}$')
+    if not color_pattern.match(fill_color):
+        return {
+            'error': 'Invalid fill_color',
+            'message': 'fill_color must be a valid hex color (e.g., #000000)',
+            'provided': fill_color
+        }, 400
+    
+    if not color_pattern.match(back_color):
+        return {
+            'error': 'Invalid back_color',
+            'message': 'back_color must be a valid hex color (e.g., #ffffff)',
+            'provided': back_color
+        }, 400
+    
+    try:
+        # Map error correction levels
+        error_correction_map = {
+            'L': qrcode.constants.ERROR_CORRECT_L,
+            'M': qrcode.constants.ERROR_CORRECT_M,
+            'Q': qrcode.constants.ERROR_CORRECT_Q,
+            'H': qrcode.constants.ERROR_CORRECT_H
+        }
+        
+        # Create QR code instance with advanced options
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=error_correction_map.get(error_correction, qrcode.constants.ERROR_CORRECT_M),
+            box_size=box_size,
+            border=border,
+        )
+        qr.add_data(text)
+        qr.make(fit=True)
+
+        # Create image with custom colors
+        img = qr.make_image(fill_color=fill_color, back_color=back_color)
+        
+        # Convert to desired format
+        buffer = io.BytesIO()
+        if image_format.upper() == 'JPEG':
+            # Convert to RGB for JPEG (remove alpha channel)
+            img = img.convert('RGB')
+        img.save(buffer, format=image_format.upper())
+        buffer.seek(0)
+        
+        # Log generation to database
+        try:
+            qr_opts = {
+                'fill_color': fill_color,
+                'back_color': back_color,
+                'box_size': box_size,
+                'border': border,
+                'error_correction': error_correction
+            }
+            record = GenerationRecord(
+                ip_address=get_real_ip(),
+                code_type='qrcode',
+                code_value=text,
+                image_format=image_format.upper(),
+                qr_options=qr_opts,
+                user_agent=request.headers.get('User-Agent', ''),
+                debug_headers=get_debug_headers()
+            )
+            db.session.add(record)
+            db.session.commit()
+        except Exception as db_error:
+            # Don't fail the request if database logging fails
+            print(f"Database logging error: {db_error}")
+        
+        # Return the image file
+        file_ext = image_format.lower()
+        if file_ext == 'jpeg':
+            file_ext = 'jpg'
+        mimetype = f'image/{file_ext}'
+        
+        return send_file(
+            buffer,
+            as_attachment=False,
+            download_name=f'qrcode.{file_ext}',
+            mimetype=mimetype
+        )
+    
+    except Exception as e:
+        return {
+            'error': 'QR code generation failed',
+            'message': f'Error generating QR code in {image_format} format: {str(e)}',
+            'parameters': {
+                'text': text,
+                'error_correction': error_correction,
+                'image_format': image_format,
+                'fill_color': fill_color,
+                'back_color': back_color,
+                'box_size': box_size,
+                'border': border
+            }
+        }, 500
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
     app.run(host='0.0.0.0', port=port, debug=False)
