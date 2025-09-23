@@ -19,6 +19,9 @@ DATABASE_URL="postgresql://$DB_USER:$DB_PASS@$DB_HOST:5432/$DB_NAME"
 STATIC_IP_NAME="barcode-static-ip"
 STATIC_IP_ADDRESS="34.61.233.111"
 
+# Load balancer configuration  
+LOAD_BALANCER_IP="34.49.2.152"
+
 echo "Building and deploying Barcode Generator to Google Cloud Compute Engine..."
 
 # Build Docker image for AMD64 architecture (production compatibility)
@@ -47,14 +50,29 @@ gcloud compute instances create-with-container $INSTANCE_NAME \
     --tags=http-server,https-server \
     --project=$PROJECT_ID
 
-# Create firewall rule for HTTP traffic (if not exists)
+# Create firewall rules for HTTP traffic (if not exists)
 echo "Setting up firewall rules..."
 gcloud compute firewall-rules create allow-http-8080 \
     --allow tcp:8080 \
     --source-ranges 0.0.0.0/0 \
     --target-tags http-server \
     --project=$PROJECT_ID \
-    --quiet || echo "Firewall rule already exists"
+    --quiet || echo "Firewall rule for port 8080 already exists"
+
+gcloud compute firewall-rules create allow-http-80 \
+    --allow tcp:80 \
+    --source-ranges 0.0.0.0/0 \
+    --target-tags http-server \
+    --project=$PROJECT_ID \
+    --quiet || echo "Firewall rule for port 80 already exists"
+
+# Add instance to load balancer instance group
+echo "Adding instance to load balancer..."
+gcloud compute instance-groups unmanaged add-instances barcode-instance-group \
+    --instances=$INSTANCE_NAME \
+    --zone=$ZONE \
+    --project=$PROJECT_ID \
+    --quiet || echo "Instance already in load balancer group"
 
 echo "Deployment complete!"
 echo ""
@@ -66,16 +84,19 @@ echo "Zone: $ZONE"
 echo "Database: PostgreSQL (Cloud SQL)"
 echo ""
 
-# Display the static IP information
+# Display access information
 echo "🌐 Access Information:"
 echo "====================="
-echo "Static IP: $STATIC_IP_ADDRESS (permanent)"
-echo "Web Interface: http://$STATIC_IP_ADDRESS:8080"
-echo "Barcode API: POST http://$STATIC_IP_ADDRESS:8080/api/barcode"
-echo "QR Code API: POST http://$STATIC_IP_ADDRESS:8080/api/qrcode"
+echo "Instance IP: $STATIC_IP_ADDRESS (port 8080 only)"
+echo "Load Balancer IP: $LOAD_BALANCER_IP (port 80 & 8080)"
+echo ""
+echo "Web Interface (port 80): http://$LOAD_BALANCER_IP"
+echo "Web Interface (port 8080): http://$LOAD_BALANCER_IP:8080"
+echo "Barcode API: POST http://$LOAD_BALANCER_IP/api/barcode"
+echo "QR Code API: POST http://$LOAD_BALANCER_IP/api/qrcode"
 echo ""
 echo "💡 Next Steps:"
-echo "- Update your DNS A record for barcodes.dev to point to: $STATIC_IP_ADDRESS"
-echo "- This IP address is static and will not change"
+echo "- Update your DNS A record for barcodes.dev to point to: $LOAD_BALANCER_IP"
+echo "- This enables access via http://barcodes.dev (port 80)"
 echo "- Wait 2-3 minutes for the container to fully start"
 echo "- Test the APIs using the endpoints above"
