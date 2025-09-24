@@ -90,6 +90,20 @@ def init_db():
     try:
         db.create_all()
         print("✅ Database tables created/updated")
+        
+        # Check if debug_headers column exists, add it if missing
+        try:
+            db.session.execute(db.text("SELECT debug_headers FROM generation_records LIMIT 1")).fetchone()
+            print("✅ Schema is up to date")
+        except Exception as schema_error:
+            if "no such column: debug_headers" in str(schema_error):
+                print("🔄 Adding missing debug_headers column...")
+                db.session.execute(db.text("ALTER TABLE generation_records ADD COLUMN debug_headers TEXT"))
+                db.session.commit()
+                print("✅ debug_headers column added successfully")
+            else:
+                print(f"⚠️  Schema check warning: {schema_error}")
+                
     except Exception as e:
         print(f"❌ Error creating database tables: {e}")
 
@@ -115,6 +129,38 @@ def debug():
         return str(debug_info)
     except Exception as e:
         return f"Error: {str(e)}"
+
+@app.route('/db-status')
+def db_status():
+    """Debug endpoint to check database status"""
+    try:
+        db_url = app.config.get('SQLALCHEMY_DATABASE_URI', 'Not configured')
+        env_url = os.environ.get('DATABASE_URL', 'Not set')
+        
+        # Test basic database connection
+        try:
+            result = db.session.execute(db.text("SELECT 1")).fetchone()
+            db_test = "✅ Database connection successful"
+        except Exception as e:
+            db_test = f"❌ Database connection failed: {str(e)}"
+        
+        # Check if debug_headers column exists
+        try:
+            db.session.execute(db.text("SELECT debug_headers FROM generation_records LIMIT 1")).fetchone()
+            schema_test = "✅ debug_headers column exists"
+        except Exception as e:
+            schema_test = f"❌ debug_headers column missing: {str(e)}"
+        
+        return f"""
+Database Status Report:
+=====================
+Environment DATABASE_URL: {env_url[:50]}...
+App Database URI: {db_url[:50]}...
+Connection Test: {db_test}
+Schema Test: {schema_test}
+"""
+    except Exception as e:
+        return f"Status check error: {str(e)}"
 
 @app.route('/generate', methods=['POST'])
 def generate_barcode():
