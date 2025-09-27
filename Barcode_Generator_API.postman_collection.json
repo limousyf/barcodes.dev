@@ -1,0 +1,879 @@
+{
+	"info": {
+		"_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+		"name": "Barcode Generator API",
+		"description": "Comprehensive test collection for the Barcode Generator API including nominal cases and edge cases for error handling.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Barcode API Tests",
+			"item": [
+				{
+					"name": "Nominal Cases",
+					"item": [
+						{
+							"name": "Generate Code128 Barcode (PNG)",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"text\": \"TEST123456\",\n    \"barcode_type\": \"code128\",\n    \"image_format\": \"PNG\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/barcode",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"barcode"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Generate EAN13 Barcode (JPEG)",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"text\": \"1234567890123\",\n    \"barcode_type\": \"ean13\",\n    \"image_format\": \"JPEG\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/barcode",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"barcode"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Generate Code39 Barcode (WEBP)",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"text\": \"HELLO123\",\n    \"barcode_type\": \"code39\",\n    \"image_format\": \"WEBP\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/barcode",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"barcode"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Generate UPC Barcode",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"text\": \"123456789012\",\n    \"barcode_type\": \"upca\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/barcode",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"barcode"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Edge Cases & Error Testing",
+					"item": [
+						{
+							"name": "Missing Text Parameter",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"barcode_type\": \"code128\",\n    \"image_format\": \"PNG\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/barcode",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"barcode"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Empty Text Parameter",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"text\": \"\",\n    \"barcode_type\": \"code128\",\n    \"image_format\": \"PNG\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/barcode",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"barcode"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Invalid Barcode Type",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"text\": \"TEST123\",\n    \"barcode_type\": \"invalid_type\",\n    \"image_format\": \"PNG\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/barcode",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"barcode"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Invalid Image Format",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"text\": \"TEST123\",\n    \"barcode_type\": \"code128\",\n    \"image_format\": \"BMP\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/barcode",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"barcode"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Invalid JSON Payload",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"text\": \"TEST123\",\n    \"barcode_type\": \"code128\",\n    \"image_format\": \"PNG\",\n    \"invalid_field\": true\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/barcode",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"barcode"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Very Long Text",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"text\": \"THIS_IS_A_VERY_LONG_TEXT_STRING_THAT_MIGHT_CAUSE_ISSUES_WITH_BARCODE_GENERATION_ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890\",\n    \"barcode_type\": \"code128\",\n    \"image_format\": \"PNG\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/barcode",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"barcode"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Special Characters",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"text\": \"!@#$%^&*()_+-={}[]|\\\\:;\\\"'<>?,./<script>alert('xss')</script>\",\n    \"barcode_type\": \"code128\",\n    \"image_format\": \"PNG\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/barcode",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"barcode"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "QR Code API Tests",
+			"item": [
+				{
+					"name": "Nominal Cases",
+					"item": [
+						{
+							"name": "Generate Basic QR Code",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"text\": \"Hello World!\",\n    \"image_format\": \"PNG\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/qrcode",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"qrcode"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Generate QR Code with Custom Colors",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"text\": \"Custom colored QR code\",\n    \"fill_color\": \"#FF0000\",\n    \"back_color\": \"#FFFF00\",\n    \"image_format\": \"PNG\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/qrcode",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"qrcode"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Generate QR Code with Custom Size",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"text\": \"Large QR code with custom border\",\n    \"box_size\": 15,\n    \"border\": 8,\n    \"image_format\": \"PNG\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/qrcode",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"qrcode"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Generate QR Code with High Error Correction",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"text\": \"QR code with high error correction\",\n    \"error_correction\": \"H\",\n    \"image_format\": \"JPEG\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/qrcode",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"qrcode"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Generate QR Code with URL",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"text\": \"https://barcodes.dev\",\n    \"image_format\": \"WEBP\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/qrcode",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"qrcode"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Edge Cases & Error Testing",
+					"item": [
+						{
+							"name": "Missing Text Parameter",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"image_format\": \"PNG\",\n    \"fill_color\": \"#000000\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/qrcode",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"qrcode"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Empty Text Parameter",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"text\": \"\",\n    \"image_format\": \"PNG\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/qrcode",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"qrcode"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Invalid Error Correction Level",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"text\": \"Test QR\",\n    \"error_correction\": \"X\",\n    \"image_format\": \"PNG\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/qrcode",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"qrcode"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Invalid Image Format",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"text\": \"Test QR\",\n    \"image_format\": \"GIF\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/qrcode",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"qrcode"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Invalid Box Size (Too Large)",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"text\": \"Test QR\",\n    \"box_size\": 100,\n    \"image_format\": \"PNG\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/qrcode",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"qrcode"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Invalid Box Size (Too Small)",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"text\": \"Test QR\",\n    \"box_size\": 0,\n    \"image_format\": \"PNG\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/qrcode",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"qrcode"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Invalid Border Size",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"text\": \"Test QR\",\n    \"border\": 25,\n    \"image_format\": \"PNG\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/qrcode",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"qrcode"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Invalid Fill Color",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"text\": \"Test QR\",\n    \"fill_color\": \"red\",\n    \"image_format\": \"PNG\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/qrcode",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"qrcode"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Invalid Back Color",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"text\": \"Test QR\",\n    \"back_color\": \"#GGGGGG\",\n    \"image_format\": \"PNG\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/qrcode",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"qrcode"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Invalid Numeric Parameters (String)",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"text\": \"Test QR\",\n    \"box_size\": \"not_a_number\",\n    \"border\": \"also_not_a_number\",\n    \"image_format\": \"PNG\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/qrcode",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"qrcode"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Very Long QR Code Text",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"text\": \"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo. Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt.\",\n    \"image_format\": \"PNG\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/qrcode",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"qrcode"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "System & Debug Endpoints",
+			"item": [
+				{
+					"name": "Database Status Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/db-status",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"db-status"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Run Schema Migration",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/migrate-schema",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"migrate-schema"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Debug Headers (Recent Requests)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/debug",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"debug"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Main Page (Health Check)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								""
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://34.49.2.152",
+			"type": "string"
+		},
+		{
+			"key": "local_url",
+			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "production_url",
+			"value": "https://barcodes.dev",
+			"type": "string"
+		}
+	]
+}
