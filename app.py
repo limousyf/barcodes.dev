@@ -39,6 +39,27 @@ def get_debug_headers():
     """Get all request headers for debugging purposes."""
     return str(dict(request.headers)) + f" | remote_addr: {request.remote_addr}"
 
+def log_generation_attempt(code_type, code_value, barcode_symbology=None, image_format=None, qr_options=None, success=True, error_message=None):
+    """Log all generation attempts (successful and failed) to database"""
+    try:
+        record = GenerationRecord(
+            ip_address=get_real_ip(),
+            code_type=code_type,
+            barcode_symbology=barcode_symbology,
+            code_value=code_value,
+            image_format=image_format or 'PNG',
+            qr_options=qr_options,
+            user_agent=request.headers.get('User-Agent', ''),
+            debug_headers=get_debug_headers(),
+            success=success,
+            error_message=error_message
+        )
+        db.session.add(record)
+        db.session.commit()
+        print(f"✅ Logged {'successful' if success else 'failed'} {code_type} generation attempt")
+    except Exception as db_error:
+        print(f"❌ Database logging error: {db_error}")
+
 # Database configuration with PostgreSQL priority and SQLite fallback
 def configure_database():
     database_url = os.environ.get('DATABASE_URL')
@@ -79,6 +100,8 @@ class GenerationRecord(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     user_agent = db.Column(db.Text)
     debug_headers = db.Column(db.Text)  # Temporary field for debugging
+    success = db.Column(db.Boolean, nullable=False, default=True)  # True for successful generations, False for failed attempts
+    error_message = db.Column(db.Text)  # Error details for failed attempts
     
     def __repr__(self):
         return f'<GenerationRecord {self.code_type}: {self.code_value[:50]}>'
@@ -90,20 +113,67 @@ def init_db():
     try:
         db.create_all()
         print("✅ Database tables created/updated")
-        
-        # Check if debug_headers column exists, add it if missing
-        try:
-            db.session.execute(db.text("SELECT debug_headers FROM generation_records LIMIT 1")).fetchone()
-            print("✅ Schema is up to date")
-        except Exception as schema_error:
-            if "no such column: debug_headers" in str(schema_error):
-                print("🔄 Adding missing debug_headers column...")
-                db.session.execute(db.text("ALTER TABLE generation_records ADD COLUMN debug_headers TEXT"))
+
+        # Check for missing columns and add them if needed
+        columns_to_add = [
+            ('debug_headers', 'TEXT', None),
+            ('success', 'BOOLEAN', True),
+            ('error_message', 'TEXT', None)
+        ]
+
+        # Check if we're using PostgreSQL or SQLite
+        database_url = app.config.get('SQLALCHEMY_DATABASE_URI', '')
+        is_postgresql = database_url.startswith('postgresql://')
+
+        for column_name, column_type, default_value in columns_to_add:
+            # Start each column check in a fresh transaction
+            try:
+                db.session.rollback()  # Ensure clean state
+                db.session.execute(db.text(f"SELECT {column_name} FROM generation_records LIMIT 1")).fetchone()
                 db.session.commit()
-                print("✅ debug_headers column added successfully")
-            else:
-                print(f"⚠️  Schema check warning: {schema_error}")
-                
+                print(f"✅ Column {column_name} already exists")
+            except Exception as schema_error:
+                db.session.rollback()  # Rollback failed SELECT
+
+                if "does not exist" in str(schema_error) or f"no such column: {column_name}" in str(schema_error):
+                    try:
+                        print(f"🔄 Adding missing {column_name} column...")
+
+                        if is_postgresql:
+                            # PostgreSQL syntax: Add column with default value in one step
+                            if default_value is not None:
+                                if isinstance(default_value, bool):
+                                    default_sql = 'TRUE' if default_value else 'FALSE'
+                                    db.session.execute(db.text(f"ALTER TABLE generation_records ADD COLUMN {column_name} {column_type} DEFAULT {default_sql}"))
+                                    # Update existing NULL values
+                                    db.session.execute(db.text(f"UPDATE generation_records SET {column_name} = {default_sql} WHERE {column_name} IS NULL"))
+                                else:
+                                    db.session.execute(db.text(f"ALTER TABLE generation_records ADD COLUMN {column_name} {column_type} DEFAULT '{default_value}'"))
+                            else:
+                                db.session.execute(db.text(f"ALTER TABLE generation_records ADD COLUMN {column_name} {column_type}"))
+                        else:
+                            # SQLite syntax: Add column, then update if needed
+                            db.session.execute(db.text(f"ALTER TABLE generation_records ADD COLUMN {column_name} {column_type}"))
+                            if default_value is not None:
+                                if isinstance(default_value, bool):
+                                    default_sql = '1' if default_value else '0'  # SQLite boolean values
+                                    db.session.execute(db.text(f"UPDATE generation_records SET {column_name} = {default_sql} WHERE {column_name} IS NULL"))
+                                else:
+                                    db.session.execute(db.text(f"UPDATE generation_records SET {column_name} = '{default_value}' WHERE {column_name} IS NULL"))
+
+                        db.session.commit()
+                        print(f"✅ {column_name} column added successfully")
+                    except Exception as alter_error:
+                        db.session.rollback()
+                        print(f"❌ Failed to add {column_name} column: {alter_error}")
+                        print(f"   Database type: {'PostgreSQL' if is_postgresql else 'SQLite'}")
+                        print(f"   Error details: {type(alter_error).__name__}: {alter_error}")
+                else:
+                    print(f"⚠️  Schema check warning for {column_name}: {schema_error}")
+                    db.session.rollback()  # Rollback after warning
+
+        print("✅ Schema migration complete")
+
     except Exception as e:
         print(f"❌ Error creating database tables: {e}")
 
@@ -144,12 +214,15 @@ def db_status():
         except Exception as e:
             db_test = f"❌ Database connection failed: {str(e)}"
         
-        # Check if debug_headers column exists
-        try:
-            db.session.execute(db.text("SELECT debug_headers FROM generation_records LIMIT 1")).fetchone()
-            schema_test = "✅ debug_headers column exists"
-        except Exception as e:
-            schema_test = f"❌ debug_headers column missing: {str(e)}"
+        # Check if all required columns exist
+        columns_status = []
+        required_columns = ['debug_headers', 'success', 'error_message']
+        for col in required_columns:
+            try:
+                db.session.execute(db.text(f"SELECT {col} FROM generation_records LIMIT 1")).fetchone()
+                columns_status.append(f"✅ {col} column exists")
+            except Exception as e:
+                columns_status.append(f"❌ {col} column missing: {str(e)}")
         
         return f"""
 Database Status Report:
@@ -157,10 +230,20 @@ Database Status Report:
 Environment DATABASE_URL: {env_url[:50]}...
 App Database URI: {db_url[:50]}...
 Connection Test: {db_test}
-Schema Test: {schema_test}
+Schema Status:
+{chr(10).join(columns_status)}
 """
     except Exception as e:
         return f"Status check error: {str(e)}"
+
+@app.route('/migrate-schema')
+def migrate_schema():
+    """Manual schema migration endpoint"""
+    try:
+        init_db()
+        return "Schema migration completed. Check /db-status for results."
+    except Exception as e:
+        return f"Migration error: {str(e)}"
 
 @app.route('/generate', methods=['POST'])
 def generate_barcode():
@@ -443,8 +526,10 @@ def api_generate_barcode():
     
     # Validate required parameters
     if not text:
+        error_msg = 'Missing required parameter: text'
+        log_generation_attempt('barcode', text or '[empty]', barcode_type, image_format, success=False, error_message=error_msg)
         return {
-            'error': 'Missing required parameter: text',
+            'error': error_msg,
             'message': 'The text parameter is required and cannot be empty'
         }, 400
     
@@ -455,8 +540,10 @@ def api_generate_barcode():
         'codabar', 'pzn', 'jan', 'ean14', 'gtin'
     ]
     if barcode_type not in valid_barcode_types:
+        error_msg = 'Invalid barcode_type'
+        log_generation_attempt('barcode', text, barcode_type, image_format, success=False, error_message=f'{error_msg}: {barcode_type}')
         return {
-            'error': 'Invalid barcode_type',
+            'error': error_msg,
             'message': f'barcode_type must be one of: {", ".join(valid_barcode_types)}',
             'provided': barcode_type
         }, 400
@@ -464,8 +551,10 @@ def api_generate_barcode():
     # Validate image format
     valid_image_formats = ['PNG', 'JPEG', 'WEBP']
     if image_format.upper() not in valid_image_formats:
+        error_msg = 'Invalid image_format'
+        log_generation_attempt('barcode', text, barcode_type, image_format, success=False, error_message=f'{error_msg}: {image_format}')
         return {
-            'error': 'Invalid image_format',
+            'error': error_msg,
             'message': f'image_format must be one of: {", ".join(valid_image_formats)}',
             'provided': image_format
         }, 400
@@ -481,22 +570,8 @@ def api_generate_barcode():
         barcode_instance.write(buffer)
         buffer.seek(0)
         
-        # Log generation to database
-        try:
-            record = GenerationRecord(
-                ip_address=get_real_ip(),
-                code_type='barcode',
-                barcode_symbology=barcode_type,
-                code_value=text,
-                image_format=image_format.upper(),
-                user_agent=request.headers.get('User-Agent', ''),
-                debug_headers=get_debug_headers()
-            )
-            db.session.add(record)
-            db.session.commit()
-        except Exception as db_error:
-            # Don't fail the request if database logging fails
-            print(f"Database logging error: {db_error}")
+        # Log successful generation to database
+        log_generation_attempt('barcode', text, barcode_type, image_format.upper(), success=True)
         
         # Return the image file
         file_ext = image_format.lower()
@@ -512,6 +587,8 @@ def api_generate_barcode():
         )
     
     except Exception as e:
+        error_msg = f'Barcode generation failed: {str(e)}'
+        log_generation_attempt('barcode', text, barcode_type, image_format, success=False, error_message=error_msg)
         return {
             'error': 'Barcode generation failed',
             'message': f'Error generating {barcode_type.upper()} barcode in {image_format} format: {str(e)}',
@@ -543,23 +620,32 @@ def api_generate_qr():
         box_size = int(data.get('box_size', '10'))
         border = int(data.get('border', '4'))
     except (ValueError, TypeError):
+        error_msg = 'Invalid numeric parameter'
+        qr_options = {'error_correction': error_correction, 'fill_color': fill_color, 'back_color': back_color, 'box_size': data.get('box_size'), 'border': data.get('border')}
+        log_generation_attempt('qrcode', text or '[empty]', None, image_format, qr_options, success=False, error_message=error_msg)
         return {
-            'error': 'Invalid numeric parameter',
+            'error': error_msg,
             'message': 'box_size and border must be valid integers'
         }, 400
     
     # Validate required parameters
     if not text:
+        error_msg = 'Missing required parameter: text'
+        qr_options = {'error_correction': error_correction, 'fill_color': fill_color, 'back_color': back_color, 'box_size': box_size, 'border': border}
+        log_generation_attempt('qrcode', text or '[empty]', None, image_format, qr_options, success=False, error_message=error_msg)
         return {
-            'error': 'Missing required parameter: text',
+            'error': error_msg,
             'message': 'The text parameter is required and cannot be empty'
         }, 400
     
     # Validate error correction level
     valid_error_corrections = ['L', 'M', 'Q', 'H']
     if error_correction not in valid_error_corrections:
+        error_msg = 'Invalid error_correction'
+        qr_options = {'error_correction': error_correction, 'fill_color': fill_color, 'back_color': back_color, 'box_size': box_size, 'border': border}
+        log_generation_attempt('qrcode', text, None, image_format, qr_options, success=False, error_message=f'{error_msg}: {error_correction}')
         return {
-            'error': 'Invalid error_correction',
+            'error': error_msg,
             'message': f'error_correction must be one of: {", ".join(valid_error_corrections)}',
             'provided': error_correction
         }, 400
@@ -567,23 +653,32 @@ def api_generate_qr():
     # Validate image format
     valid_image_formats = ['PNG', 'JPEG', 'WEBP']
     if image_format.upper() not in valid_image_formats:
+        error_msg = 'Invalid image_format'
+        qr_options = {'error_correction': error_correction, 'fill_color': fill_color, 'back_color': back_color, 'box_size': box_size, 'border': border}
+        log_generation_attempt('qrcode', text, None, image_format, qr_options, success=False, error_message=f'{error_msg}: {image_format}')
         return {
-            'error': 'Invalid image_format',
+            'error': error_msg,
             'message': f'image_format must be one of: {", ".join(valid_image_formats)}',
             'provided': image_format
         }, 400
     
     # Validate numeric ranges
     if not (1 <= box_size <= 50):
+        error_msg = 'Invalid box_size'
+        qr_options = {'error_correction': error_correction, 'fill_color': fill_color, 'back_color': back_color, 'box_size': box_size, 'border': border}
+        log_generation_attempt('qrcode', text, None, image_format, qr_options, success=False, error_message=f'{error_msg}: {box_size}')
         return {
-            'error': 'Invalid box_size',
+            'error': error_msg,
             'message': 'box_size must be between 1 and 50',
             'provided': box_size
         }, 400
     
     if not (0 <= border <= 20):
+        error_msg = 'Invalid border'
+        qr_options = {'error_correction': error_correction, 'fill_color': fill_color, 'back_color': back_color, 'box_size': box_size, 'border': border}
+        log_generation_attempt('qrcode', text, None, image_format, qr_options, success=False, error_message=f'{error_msg}: {border}')
         return {
-            'error': 'Invalid border',
+            'error': error_msg,
             'message': 'border must be between 0 and 20',
             'provided': border
         }, 400
@@ -592,15 +687,21 @@ def api_generate_qr():
     import re
     color_pattern = re.compile(r'^#[0-9A-Fa-f]{6}$')
     if not color_pattern.match(fill_color):
+        error_msg = 'Invalid fill_color'
+        qr_options = {'error_correction': error_correction, 'fill_color': fill_color, 'back_color': back_color, 'box_size': box_size, 'border': border}
+        log_generation_attempt('qrcode', text, None, image_format, qr_options, success=False, error_message=f'{error_msg}: {fill_color}')
         return {
-            'error': 'Invalid fill_color',
+            'error': error_msg,
             'message': 'fill_color must be a valid hex color (e.g., #000000)',
             'provided': fill_color
         }, 400
     
     if not color_pattern.match(back_color):
+        error_msg = 'Invalid back_color'
+        qr_options = {'error_correction': error_correction, 'fill_color': fill_color, 'back_color': back_color, 'box_size': box_size, 'border': border}
+        log_generation_attempt('qrcode', text, None, image_format, qr_options, success=False, error_message=f'{error_msg}: {back_color}')
         return {
-            'error': 'Invalid back_color',
+            'error': error_msg,
             'message': 'back_color must be a valid hex color (e.g., #ffffff)',
             'provided': back_color
         }, 400
@@ -635,29 +736,9 @@ def api_generate_qr():
         img.save(buffer, format=image_format.upper())
         buffer.seek(0)
         
-        # Log generation to database
-        try:
-            qr_opts = {
-                'fill_color': fill_color,
-                'back_color': back_color,
-                'box_size': box_size,
-                'border': border,
-                'error_correction': error_correction
-            }
-            record = GenerationRecord(
-                ip_address=get_real_ip(),
-                code_type='qrcode',
-                code_value=text,
-                image_format=image_format.upper(),
-                qr_options=qr_opts,
-                user_agent=request.headers.get('User-Agent', ''),
-                debug_headers=get_debug_headers()
-            )
-            db.session.add(record)
-            db.session.commit()
-        except Exception as db_error:
-            # Don't fail the request if database logging fails
-            print(f"Database logging error: {db_error}")
+        # Log successful generation to database
+        qr_options = {'fill_color': fill_color, 'back_color': back_color, 'box_size': box_size, 'border': border, 'error_correction': error_correction}
+        log_generation_attempt('qrcode', text, None, image_format.upper(), qr_options, success=True)
         
         # Return the image file
         file_ext = image_format.lower()
@@ -673,6 +754,9 @@ def api_generate_qr():
         )
     
     except Exception as e:
+        error_msg = f'QR code generation failed: {str(e)}'
+        qr_options = {'fill_color': fill_color, 'back_color': back_color, 'box_size': box_size, 'border': border, 'error_correction': error_correction}
+        log_generation_attempt('qrcode', text, None, image_format, qr_options, success=False, error_message=error_msg)
         return {
             'error': 'QR code generation failed',
             'message': f'Error generating QR code in {image_format} format: {str(e)}',
